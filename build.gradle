@@ -1,0 +1,84 @@
+buildscript {
+    ext {
+        jiebaiFrameworkCommonVersion = "1.0.2.RELEASE"
+        springBootVersion = "2.1.6.RELEASE"
+        springDataRedisVersion = "2.1.9.RELEASE"
+        jsr310Version = "2.4.0"
+        jwtVersion = "3.8.0"
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+group 'com.jiebai'
+
+apply plugin: 'java'
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    classifier 'sources'
+}
+task javadocJar(type: Jar) {
+    from javadoc
+    classifier 'javadoc'
+}
+
+sourceCompatibility = 1.8
+
+// java编译的时候缺省状态下会因为中文字符而失败
+[compileJava, compileTestJava, javadoc]*.options*.encoding = 'UTF-8'
+
+repositories {
+    mavenLocal() // 使用本地仓库
+    jcenter()
+    maven { url "http://maven.aliyun.com/nexus/content/repositories/central/" }
+    maven { url "http://nexus.51buyin.com/nexus/content/repositories/jiebai-release/" }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+            //若是war包，就写components.web,若是jar包，就写components.java
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+    repositories {
+        maven {
+            if (project.version.endsWith('-SNAPSHOT')) {
+                url = "http://nexus.51buyin.com/nexus/content/repositories/jiebai-snapshot/"
+            } else {
+                url = "http://nexus.51buyin.com/nexus/content/repositories/jiebai-release/"
+            }
+            credentials {
+                username project.nexus_username
+                password project.nexus_password
+            }
+        }
+    }
+}
+
+
+dependencies {
+    compile(
+            "com.jiebai:framework-common:${jiebaiFrameworkCommonVersion}",
+            "org.springframework.boot:spring-boot-starter-web:${springBootVersion}",
+            "org.springframework.boot:spring-boot-starter-security:${springBootVersion}",
+            "com.auth0:java-jwt:${jwtVersion}",
+            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jsr310Version}"
+    )
+    annotationProcessor "org.projectlombok:lombok:1.18.8"
+    testCompile(
+            "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
+    )
+}
